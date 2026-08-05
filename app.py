@@ -456,7 +456,7 @@ label{
 # ==========================================
 # 2. LOAD MODEL & TOKENIZER
 # ==========================================
-MODEL_PATH = "indobert_optimal"
+MODEL_PATH = "SonnnJ/indobert_optimal"
 REQUIRED_FILES = ["config.json", "tokenizer_config.json"]
 REQUIRED_WEIGHT_FILES_ANY = ["model.safetensors", "pytorch_model.bin"]
 REQUIRED_VOCAB_FILES_ANY = ["tokenizer.json", "vocab.txt"]
