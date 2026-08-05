@@ -1,5 +1,6 @@
 streamlit
 starlette<0.40.0
-pandas
 torch
 transformers
+pandas
+plotly
