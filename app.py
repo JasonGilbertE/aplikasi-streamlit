@@ -457,36 +457,12 @@ label{
 # 2. LOAD MODEL & TOKENIZER
 # ==========================================
 MODEL_PATH = "SonnnJ/indobert_optimal"
-REQUIRED_FILES = ["config.json", "tokenizer_config.json"]
-REQUIRED_WEIGHT_FILES_ANY = ["model.safetensors", "pytorch_model.bin"]
-REQUIRED_VOCAB_FILES_ANY = ["tokenizer.json", "vocab.txt"]
 DEFAULT_LABEL_MAP = {0: "Negatif", 1: "Netral", 2: "Positif"}
-
-def _validate_model_folder(model_path: str):
-    if not os.path.isdir(model_path):
-        return False, f"Folder model tidak ditemukan di path: `{model_path}`"
-
-    missing = [f for f in REQUIRED_FILES if not os.path.isfile(os.path.join(model_path, f))]
-    has_weight = any(os.path.isfile(os.path.join(model_path, f)) for f in REQUIRED_WEIGHT_FILES_ANY)
-    if not has_weight:
-        missing.append(" / ".join(REQUIRED_WEIGHT_FILES_ANY))
-
-    has_vocab = any(os.path.isfile(os.path.join(model_path, f)) for f in REQUIRED_VOCAB_FILES_ANY)
-    if not has_vocab:
-        missing.append(" / ".join(REQUIRED_VOCAB_FILES_ANY))
-
-    if missing:
-        return False, f"File tidak lengkap: {', '.join(missing)}"
-    return True, ""
 
 @st.cache_resource
 def load_model_and_tokenizer(model_path):
-    is_valid, error_message = _validate_model_folder(model_path)
-    if not is_valid:
-        st.error(f"⚠️ {error_message}")
-        st.stop()
-
     try:
+        # Mengunduh langsung dari Hugging Face Hub secara otomatis
         tokenizer = AutoTokenizer.from_pretrained(model_path)
         model = AutoModelForSequenceClassification.from_pretrained(model_path)
         model.eval()
@@ -499,7 +475,7 @@ def load_model_and_tokenizer(model_path):
 
         return tokenizer, model, label_map
     except Exception as e:
-        st.error(f"⚠️ Gagal memuat model: {e}")
+        st.error(f"⚠️ Gagal memuat model dari Hugging Face: {e}")
         st.stop()
 
 tokenizer, model, LABEL_MAP = load_model_and_tokenizer(MODEL_PATH)
@@ -532,7 +508,6 @@ def predict_sentiment(text):
 
     confidence = probs[0][pred_label].item() * 100
     return LABEL_MAP[pred_label], confidence, probs[0].tolist()
-
 # ==========================================
 # 3. SIDEBAR NAVIGATION & INFO
 # ==========================================
