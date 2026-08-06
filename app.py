@@ -534,16 +534,16 @@ with st.sidebar:
 ### Model yang Digunakan
 
 - **Model** : IndoBERT Base-P1
-- **Epoch Terbaik** : 8
+- **Epoch yang digunakan** : 10
 
 ### Performa Model
 
 | Metrik | Nilai |
 |--------|-------:|
-| Validation Loss | **1.1493** |
-| Accuracy | **0.9159** |
-| F1 Weighted | **0.9130** |
-| F1 Macro | **0.8355** |
+| Validation Loss | **1.5456** |
+| Accuracy | **0.8832** |
+| F1 Weighted | **0.8795** |
+| F1 Macro | **0.7388** |
 
 Model ini merupakan hasil pelatihan **IndoBERT Base-P1** untuk melakukan klasifikasi sentimen masyarakat terhadap pemanfaatan bawang putih. Model mampu mengklasifikasikan teks ke dalam tiga kategori, yaitu **Positif**, **Netral**, dan **Negatif**.
 """)
