@@ -599,90 +599,93 @@ with tab1:
     with col_btn:
         analyze_btn = st.button("🔍 Analisis Teks", type="primary", use_container_width=True)
 
-if analyze_btn:
-    if user_input.strip() == "":
-        st.markdown("""
-        <div class="custom-warning">
-            Silakan isi teks terlebih dahulu sebelum melakukan analisis.
-        </div>
-        """, unsafe_allow_html=True)
+    if analyze_btn:
+        if user_input.strip() == "":
+            st.markdown("""
+            <div class="custom-warning">
+                Silakan isi teks terlebih dahulu sebelum melakukan analisis.
+            </div>
+            """, unsafe_allow_html=True)
 
-    else:
-        # Cleaning selalu dijalankan otomatis, tanpa opsi toggle
-        text_to_predict = clean_text_input(user_input)
+        else:
+            # Cleaning selalu dijalankan otomatis
+            text_to_predict = clean_text_input(user_input)
 
-        with st.spinner("Sedang memproses teks..."):
-            label, confidence, probs = predict_sentiment(text_to_predict)
+            with st.spinner("Sedang memproses teks..."):
+                label, confidence, probs = predict_sentiment(text_to_predict)
 
-        st.divider()
+            st.divider()
 
-        # Tampilkan hasil teks setelah dibersihkan (selalu muncul)
-        st.markdown("##### 🧼 Teks Setelah Dibersihkan")
-        st.info(
-            text_to_predict
-            if text_to_predict
-            else "_(kosong setelah dibersihkan)_"
-        )
+            # Tampilkan hasil teks setelah dibersihkan
+            st.markdown("##### 🧼 Teks Setelah Dibersihkan")
 
-        # Layout Hasil Prediksi
-        c1, c2 = st.columns([1, 1.5])
-
-        with c1:
-            st.markdown("##### Hasil Klasifikasi")
-
-            if label == "Positif":
-                st.success(f"### 🟢 {label}")
-
-            elif label == "Negatif":
-                st.error(f"### 🔴 {label}")
-
-            else:
-                st.warning(f"### 🟡 {label}")
-
-            st.metric(
-                "Tingkat Keyakinan (Confidence)",
-                f"{confidence:.2f}%"
+            st.info(
+                text_to_predict
+                if text_to_predict
+                else "_(kosong setelah dibersihkan)_"
             )
 
-        with c2:
-            st.markdown("##### Probabilitas Tiap Kelas")
+            # Layout Hasil Prediksi
+            c1, c2 = st.columns([1, 1.5])
 
-            # Visualisasi Plotly Interaktif
-            sorted_labels = [
-                LABEL_MAP[i]
-                for i in range(len(probs))
-            ]
+            with c1:
+                st.markdown("##### Hasil Klasifikasi")
 
-            prob_df = pd.DataFrame({
-                "Sentimen": sorted_labels,
-                "Probabilitas (%)": [p * 100 for p in probs]
-            })
+                if label == "Positif":
+                    st.success(f"### 🟢 {label}")
 
-            fig = px.bar(
-                prob_df,
-                x="Sentimen",
-                y="Probabilitas (%)",
-                color="Sentimen",
-                color_discrete_map={
-                    "Positif": "#2E7D32",
-                    "Netral": "#FBC02D",
-                    "Negatif": "#C62828"
-                },
-                text_auto='.1f'
-            )
+                elif label == "Negatif":
+                    st.error(f"### 🔴 {label}")
 
-            fig.update_layout(
-                height=240,
-                showlegend=False,
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(size=15)
-            )
+                else:
+                    st.warning(f"### 🟡 {label}")
 
-            st.plotly_chart(
-                fig,
-                use_container_width=True
-            )
+                st.metric(
+                    "Tingkat Keyakinan (Confidence)",
+                    f"{confidence:.2f}%"
+                )
+
+            with c2:
+                st.markdown("##### Probabilitas Tiap Kelas")
+
+                # Visualisasi Plotly Interaktif
+                sorted_labels = [
+                    LABEL_MAP[i]
+                    for i in range(len(probs))
+                ]
+
+                prob_df = pd.DataFrame({
+                    "Sentimen": sorted_labels,
+                    "Probabilitas (%)": [
+                        p * 100 for p in probs
+                    ]
+                })
+
+                fig = px.bar(
+                    prob_df,
+                    x="Sentimen",
+                    y="Probabilitas (%)",
+                    color="Sentimen",
+                    color_discrete_map={
+                        "Positif": "#2E7D32",
+                        "Netral": "#FBC02D",
+                        "Negatif": "#C62828"
+                    },
+                    text_auto='.1f'
+                )
+
+                fig.update_layout(
+                    height=240,
+                    showlegend=False,
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    font=dict(size=15)
+                )
+
+                st.plotly_chart(
+                    fig,
+                    use_container_width=True
+                )
 
 # ==========================================
 # TAB 2: UPLOAD FILE CSV
