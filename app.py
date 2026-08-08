@@ -454,7 +454,7 @@ label{
 /* Error */
 
 .stError{
-    background:#FFEBEE !important;
+    background:#E53935  !important;
 }
 
 </style>
