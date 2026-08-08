@@ -438,23 +438,32 @@ label{
     background:#E8F5E9 !important;
 }
 
-.stWarning{
-    background:#E53935 !important;
-    color:white !important;
-    border-radius:12px !important;
-    border:none !important;
-}
+/* Warning */
 
-.stWarning p,
-.stWarning div,
-.stWarning span{
-    color:white !important;
+.stWarning{
+    background:#FFF8E1 !important;
 }
 
 /* Error */
 
 .stError{
-    background:#E53935  !important;
+    background:#FFEBEE !important;
+}
+
+/* Custom Warning Merah */
+
+.custom-warning{
+    background:#E53935 !important;
+    color:#FFFFFF !important;
+    padding:14px 16px !important;
+    border-radius:12px !important;
+    font-size:15px !important;
+    font-weight:500 !important;
+    margin:10px 0 !important;
+}
+
+.custom-warning *{
+    color:#FFFFFF !important;
 }
 
 </style>
@@ -590,12 +599,16 @@ with tab1:
     with col_btn:
         analyze_btn = st.button("🔍 Analisis Teks", type="primary", use_container_width=True)
 
-    if analyze_btn:
-        if user_input.strip() == "":
-            st.warning("Silakan isi teks terlebih dahulu sebelum melakukan analisis.")
-        else:
-            # Cleaning selalu dijalankan otomatis, tanpa opsi toggle
-            text_to_predict = clean_text_input(user_input)
+if analyze_btn:
+    if user_input.strip() == "":
+        st.markdown("""
+        <div class="custom-warning">
+            Silakan isi teks terlebih dahulu sebelum melakukan analisis.
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        # Cleaning selalu dijalankan otomatis, tanpa opsi toggle
+        text_to_predict = clean_text_input(user_input)
 
             with st.spinner("Sedang memproses teks..."):
                 label, confidence, probs = predict_sentiment(text_to_predict)
