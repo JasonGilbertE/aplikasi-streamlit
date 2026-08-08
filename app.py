@@ -438,10 +438,17 @@ label{
     background:#E8F5E9 !important;
 }
 
-/* Warning */
-
 .stWarning{
-    background:#FFF8E1 !important;
+    background:#E53935 !important;
+    color:white !important;
+    border-radius:12px !important;
+    border:none !important;
+}
+
+.stWarning p,
+.stWarning div,
+.stWarning span{
+    color:white !important;
 }
 
 /* Error */
