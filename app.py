@@ -514,6 +514,54 @@ def clean_text_input(text: str) -> str:
     text = re.sub(r'\s+', ' ', text).strip()                # rapikan spasi
     return text
 
+def preprocess_dataset(df, text_column):
+    """
+    Preprocessing dataset sebelum prediksi IndoBERT:
+    1. Cleaning teks
+    2. Menghapus teks kosong
+    3. Menghapus duplikat berdasarkan teks yang sudah dibersihkan
+    """
+
+    df = df.copy()
+
+    # Jumlah data awal
+    jumlah_awal = len(df)
+
+    # ==========================================
+    # 1. CLEANING TEKS
+    # ==========================================
+    df["Teks_Bersih"] = df[text_column].apply(
+        lambda x: clean_text_input(str(x)) if pd.notna(x) else ""
+    )
+
+    # ==========================================
+    # 2. HAPUS TEKS KOSONG
+    # ==========================================
+    df = df[
+        df["Teks_Bersih"].str.strip() != ""
+    ].copy()
+
+    jumlah_setelah_kosong = len(df)
+
+    # ==========================================
+    # 3. HAPUS DUPLIKAT
+    # Berdasarkan teks yang sudah dibersihkan
+    # ==========================================
+    df = df.drop_duplicates(
+        subset=["Teks_Bersih"],
+        keep="first"
+    ).reset_index(drop=True)
+
+    jumlah_akhir = len(df)
+
+    info = {
+        "jumlah_awal": jumlah_awal,
+        "teks_kosong": jumlah_awal - jumlah_setelah_kosong,
+        "duplikat": jumlah_setelah_kosong - jumlah_akhir,
+        "jumlah_akhir": jumlah_akhir
+    }
+
+    return df, info
 
 def predict_sentiment(text):
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding="max_length", max_length=128)
@@ -691,19 +739,48 @@ with tab1:
 # TAB 2: UPLOAD FILE CSV
 # ==========================================
 with tab2:
+
     st.markdown("#### Upload Dataset CSV")
-    uploaded_file = st.file_uploader("Unggah file CSV berisi data tweet/ulasan", type=["csv"])
+
+    uploaded_file = st.file_uploader(
+        "Unggah file CSV berisi data tweet/ulasan",
+        type=["csv"]
+    )
 
     if uploaded_file is not None:
+
         try:
+
+            # ==========================================
+            # BACA CSV
+            # ==========================================
             df_upload = pd.read_csv(uploaded_file)
 
-            with st.expander("📋 Pratinjau Dataset", expanded=False):
-                st.dataframe(df_upload.head(5), use_container_width=True)
+            if df_upload.empty:
+                st.error("❌ Dataset yang diunggah tidak memiliki data.")
+                st.stop()
 
+            # ==========================================
+            # PREVIEW DATASET
+            # ==========================================
+            with st.expander(
+                "📋 Pratinjau Dataset",
+                expanded=False
+            ):
+                st.dataframe(
+                    df_upload.head(5),
+                    use_container_width=True
+                )
+
+            # ==========================================
+            # PILIH KOLOM TEKS
+            # ==========================================
             default_index = 0
+
             if "cleaned_full_text" in df_upload.columns:
-                default_index = list(df_upload.columns).index("cleaned_full_text")
+                default_index = list(
+                    df_upload.columns
+                ).index("cleaned_full_text")
 
             text_column = st.selectbox(
                 "Pilih Kolom Teks yang Akan Dianalisis:",
@@ -711,85 +788,259 @@ with tab2:
                 index=default_index
             )
 
-            if st.button("⚡ Jalankan Analisis Data", type="primary"):
-                with st.status("⏳ Memproses seluruh baris data...", expanded=False):
-                    results_label = []
-                    results_conf = []
-                    cleaned_texts = []
+            st.caption(
+                f"Jumlah data awal: **{len(df_upload):,} baris**"
+            )
 
-                    for text in df_upload[text_column]:
-                        raw_text = str(text).strip() if pd.notna(text) else ""
-                        clean_text = clean_text_input(raw_text)
-                        cleaned_texts.append(clean_text)
+            # ==========================================
+            # TOMBOL ANALISIS
+            # ==========================================
+            if st.button(
+                "⚡ Jalankan Analisis Data",
+                type="primary"
+            ):
 
-                        if clean_text == "" or clean_text.lower() == "nan":
-                            results_label.append("Netral")
-                            results_conf.append(0.0)
-                        else:
-                            lbl, conf, _ = predict_sentiment(clean_text)
-                            results_label.append(lbl)
-                            results_conf.append(round(conf, 2))
+                # ==========================================
+                # PREPROCESSING
+                # ==========================================
+                with st.status(
+                    "🧹 Melakukan preprocessing data...",
+                    expanded=False
+                ):
 
-                    df_upload['Teks_Bersih'] = cleaned_texts
-                    df_upload['Sentimen_Prediksi'] = results_label
-                    df_upload['Confidence (%)'] = results_conf
+                    df_result, info = preprocess_dataset(
+                        df_upload,
+                        text_column
+                    )
 
-                st.success("🎉 Analisis massal berhasil diselesaikan!")
+                # ==========================================
+                # HASIL PREPROCESSING
+                # ==========================================
+                st.markdown("### 🧹 Hasil Preprocessing")
 
-                # Ringkasan Metrik
+                p1, p2, p3, p4 = st.columns(4)
+
+                p1.metric(
+                    "Data Awal",
+                    f"{info['jumlah_awal']:,}"
+                )
+
+                p2.metric(
+                    "Teks Kosong",
+                    f"{info['teks_kosong']:,}"
+                )
+
+                p3.metric(
+                    "Duplikat",
+                    f"{info['duplikat']:,}"
+                )
+
+                p4.metric(
+                    "Data Dianalisis",
+                    f"{info['jumlah_akhir']:,}"
+                )
+
+                # ==========================================
+                # PREDIKSI INDOBERT
+                # ==========================================
+                results_label = []
+                results_conf = []
+
+                progress_bar = st.progress(0)
+
+                total_data = len(df_result)
+
+                for i, text in enumerate(
+                    df_result["Teks_Bersih"]
+                ):
+
+                    label, confidence, _ = predict_sentiment(
+                        text
+                    )
+
+                    results_label.append(label)
+
+                    results_conf.append(
+                        round(confidence, 2)
+                    )
+
+                    progress_bar.progress(
+                        (i + 1) / total_data
+                    )
+
+                progress_bar.empty()
+
+                # ==========================================
+                # SIMPAN HASIL
+                # ==========================================
+                df_result["Sentimen_Prediksi"] = results_label
+
+                df_result["Confidence (%)"] = results_conf
+
+                st.success(
+                    "🎉 Analisis massal berhasil diselesaikan!"
+                )
+
+                # ==========================================
+                # RINGKASAN STATISTIK
+                # ==========================================
                 st.markdown("### 📊 Ringkasan Statistik")
-                total_data = len(df_upload)
-                pos_count = (df_upload['Sentimen_Prediksi'] == "Positif").sum()
-                neg_count = (df_upload['Sentimen_Prediksi'] == "Negatif").sum()
-                net_count = (df_upload['Sentimen_Prediksi'] == "Netral").sum()
+
+                total_data = len(df_result)
+
+                pos_count = (
+                    df_result["Sentimen_Prediksi"]
+                    == "Positif"
+                ).sum()
+
+                neg_count = (
+                    df_result["Sentimen_Prediksi"]
+                    == "Negatif"
+                ).sum()
+
+                net_count = (
+                    df_result["Sentimen_Prediksi"]
+                    == "Netral"
+                ).sum()
 
                 m1, m2, m3, m4 = st.columns(4)
-                m1.metric("Total Data", f"{total_data:,}")
-                m2.metric("🟢 Positif", f"{pos_count}", f"{pos_count/total_data*100:.1f}%")
-                m3.metric("🔴 Negatif", f"{neg_count}", f"{neg_count/total_data*100:.1f}%")
-                m4.metric("🟡 Netral", f"{net_count}", f"{net_count/total_data*100:.1f}%")
+
+                m1.metric(
+                    "Total Data",
+                    f"{total_data:,}"
+                )
+
+                m2.metric(
+                    "🟢 Positif",
+                    f"{pos_count:,}",
+                    f"{pos_count / total_data * 100:.1f}%"
+                )
+
+                m3.metric(
+                    "🔴 Negatif",
+                    f"{neg_count:,}",
+                    f"{neg_count / total_data * 100:.1f}%"
+                )
+
+                m4.metric(
+                    "🟡 Netral",
+                    f"{net_count:,}",
+                    f"{net_count / total_data * 100:.1f}%"
+                )
 
                 st.divider()
 
-                # Visualisasi
+                # ==========================================
+                # DISTRIBUSI SENTIMEN
+                # ==========================================
+                counts_df = (
+                    df_result["Sentimen_Prediksi"]
+                    .value_counts()
+                    .reset_index()
+                )
+
+                counts_df.columns = [
+                    "Sentimen",
+                    "Jumlah"
+                ]
+
+                # ==========================================
+                # VISUALISASI
+                # ==========================================
                 col_chart1, col_chart2 = st.columns(2)
 
                 with col_chart1:
-                    st.markdown("##### Distribusi Frekuensi Sentimen")
-                    counts_df = df_upload['Sentimen_Prediksi'].value_counts().reset_index()
-                    counts_df.columns = ['Sentimen', 'Jumlah']
-                    fig_bar = px.bar(
-                        counts_df, x='Sentimen', y='Jumlah', color='Sentimen',
-                        color_discrete_map={"Positif": "#2e7d32", "Netral": "#fbc02d", "Negatif": "#c62828"}
+
+                    st.markdown(
+                        "##### Distribusi Frekuensi Sentimen"
                     )
-                    fig_bar.update_layout(showlegend=False, height=300)
-                    st.plotly_chart(fig_bar, use_container_width=True)
+
+                    fig_bar = px.bar(
+                        counts_df,
+                        x="Sentimen",
+                        y="Jumlah",
+                        color="Sentimen",
+                        color_discrete_map={
+                            "Positif": "#2e7d32",
+                            "Netral": "#fbc02d",
+                            "Negatif": "#c62828"
+                        }
+                    )
+
+                    fig_bar.update_layout(
+                        showlegend=False,
+                        height=300
+                    )
+
+                    st.plotly_chart(
+                        fig_bar,
+                        use_container_width=True
+                    )
 
                 with col_chart2:
-                    st.markdown("##### Persentase Sentimen")
-                    fig_pie = px.pie(
-                        counts_df, names='Sentimen', values='Jumlah', hole=0.4,
-                        color='Sentimen',
-                        color_discrete_map={"Positif": "#2e7d32", "Netral": "#fbc02d", "Negatif": "#c62828"}
+
+                    st.markdown(
+                        "##### Persentase Sentimen"
                     )
-                    fig_pie.update_layout(height=300)
-                    st.plotly_chart(fig_pie, use_container_width=True)
 
-                st.markdown("##### 🔍  Hasil Prediksi Semua data")
-                st.dataframe(df_upload, use_container_width=True)
+                    fig_pie = px.pie(
+                        counts_df,
+                        names="Sentimen",
+                        values="Jumlah",
+                        hole=0.4,
+                        color="Sentimen",
+                        color_discrete_map={
+                            "Positif": "#2e7d32",
+                            "Netral": "#fbc02d",
+                            "Negatif": "#c62828"
+                        }
+                    )
 
-                # Download Button
-                csv_download = df_upload.to_csv(index=False).encode('utf-8')
+                    fig_pie.update_layout(
+                        height=300
+                    )
+
+                    st.plotly_chart(
+                        fig_pie,
+                        use_container_width=True
+                    )
+
+                # ==========================================
+                # HASIL PREDIKSI
+                # ==========================================
+                st.markdown(
+                    "##### 🔍 Hasil Prediksi Semua Data"
+                )
+
+                st.dataframe(
+                    df_result,
+                    use_container_width=True
+                )
+
+                # ==========================================
+                # DOWNLOAD
+                # ==========================================
+                csv_download = (
+                    df_result
+                    .to_csv(index=False)
+                    .encode("utf-8")
+                )
+
                 st.download_button(
                     label="📥 Download Hasil Sentimen (CSV)",
                     data=csv_download,
-                    file_name="hasil_analisis_sentimen_bawang_putih.csv",
+                    file_name=(
+                        "hasil_analisis_sentimen_bawang_putih.csv"
+                    ),
                     mime="text/csv",
                     type="primary"
                 )
 
         except Exception as e:
-            st.error(f"Gagal memproses file CSV: {e}")
+
+            st.error(
+                f"Gagal memproses file CSV: {e}"
+            )
 
 # ==========================================
 # FOOTER
