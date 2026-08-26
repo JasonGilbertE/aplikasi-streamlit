@@ -143,7 +143,7 @@ border-right:1px solid rgba(255,255,255,.2);
 
 section[data-testid="stSidebar"] *{
 
-    color:black !important;
+    color:white !important;
 
 }
 
