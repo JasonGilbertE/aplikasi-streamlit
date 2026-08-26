@@ -147,7 +147,8 @@ section[data-testid="stSidebar"] *{
 
 }
 
-section[data-testid="stSidebar"] summary{
+section[data-testid="stSidebar"] details,
+section[data-testid="stSidebar"] details *{
     color:black !important;
 }
 
