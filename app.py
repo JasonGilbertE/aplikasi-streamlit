@@ -115,6 +115,8 @@ letter-spacing:.5px;
 
 margin-bottom:12px;
 
+color:white !important;
+
 }
 
 .header-subtitle{
