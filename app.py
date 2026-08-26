@@ -147,6 +147,10 @@ section[data-testid="stSidebar"] *{
 
 }
 
+section[data-testid="stSidebar"] summary{
+    color:black !important;
+}
+
 /* =========================
    BUTTON
 ========================= */
